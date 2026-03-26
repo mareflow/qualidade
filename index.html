@@ -167,11 +167,17 @@
             updateTime();
         });
 
-        // Simulação de Busca na Fila
+        // BUSCA REAL NA VIEW_QUALIDADE_FILA
         async function fetchQueue() {
-            // Caso sua API ainda não esteja pronta, aqui criamos um mock idêntico ao da imagem
-            queueData = [{ os_id: "os-qual-01", business_id: "O.S-5500", client: "Maringá Parts", model: "XYZ12", urgency: "Alta" }];
-            renderSidebar();
+            try {
+                const response = await fetch(API_QUEUE);
+                const data = await response.json();
+                // A View retorna os_id, business_id, client, model, urgency, serial_number, destino, auditoria_geral
+                queueData = Array.isArray(data) ? data : (data.data || []);
+                renderSidebar();
+            } catch (e) { 
+                console.error("Erro ao carregar fila de qualidade:", e); 
+            }
         }
 
         function renderSidebar() {
@@ -201,29 +207,33 @@
             
             document.getElementById('display-os').innerText = selectedOS.business_id;
             document.getElementById('display-desc').innerText = `${selectedOS.client} | ${selectedOS.model}`;
-            document.getElementById('serial-number').innerText = `TS-${Math.floor(Math.random() * 100000)}`;
             
-            renderAuditTabs();
+            // Dados vindos da View_Qualidade_Fila
+            document.getElementById('serial-number').innerText = selectedOS.serial_number || 'N/A';
+            const destinoLabel = document.querySelector('#tab4 .bg-blue-50\\/50 h4');
+            if(destinoLabel) destinoLabel.innerText = selectedOS.destino || 'RETIRADA BALCÃO';
+            
+            renderAuditTabs(); // Agora vai usar os dados do selectedOS.auditoria_geral
             renderQualityGrid();
-            validateQualityClearance(); // Reseta o botão principal
+            validateQualityClearance();
         }
 
         // Renderiza as 3 primeiras abas padrão (OK/Recondicionar/Trocar)
-        function renderAuditTabs() {
+function renderAuditTabs() {
             ['tab1', 'tab2', 'tab3'].forEach(tabId => {
                 const container = document.getElementById(tabId);
                 container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
                     <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
                         <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
                         <div class="col-span-3">
-                            <select onchange="updateSelectColor(this)" class="w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
+                            <select onchange="updateSelectColor(this); validateQualityClearance();" class="select-audit-final w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
                                 <option value="NÃO INFORMADO">NÃO INFORMADO</option>
                                 <option value="PEÇA OK">PEÇA OK</option>
                                 <option value="RECONDICIONAR">RECONDICIONAR</option>
                                 <option value="TROCAR">TROCAR</option>
                             </select>
                         </div>
-                        <div class="col-span-4"><input type="text" placeholder="Obs..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent"></div>
+                        <div class="col-span-4"><input type="text" placeholder="Obs de auditoria..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent"></div>
                     </div>`).join('');
             });
         }
@@ -264,21 +274,31 @@
         }
 
         // REGRA DE OURO: Validação dos 12 Checkboxes
-        function validateQualityClearance() {
+function validateQualityClearance() {
+            // 1. Valida se todos os 110 itens das abas 1, 2 e 3 foram auditados
+            const allSelects = document.querySelectorAll('.select-audit-final');
+            let tabsValidated = true;
+            allSelects.forEach(select => {
+                if (select.value === "NÃO INFORMADO") tabsValidated = false;
+            });
+
+            // 2. Valida se os 12 itens da inspeção técnica final (Aba 4) foram marcados
             const totalChecks = document.querySelectorAll('.check-qualidade').length;
             const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
+            const step4Validated = (totalChecks > 0 && totalChecks === checkedCount);
+
             const btn = document.getElementById('btn-finalize-quality');
 
-            if (totalChecks > 0 && totalChecks === checkedCount) {
-                // LIBERADO
+            if (tabsValidated && step4Validated) {
+                // LIBERADO PARA EXPEDIÇÃO
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-300', 'text-slate-500');
-                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-xl', 'shadow-emerald-200');
+                btn.classList.remove('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
+                btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
             } else {
-                // BLOQUEADO
+                // TRAVADO
                 btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-300', 'text-slate-500');
-                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-xl', 'shadow-emerald-200');
+                btn.classList.add('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
             }
         }
 
@@ -308,10 +328,40 @@
             document.getElementById('current-time').innerText = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
         }
 
-        async function handleApproveQuality() {
-            if(!confirm("Aprovar inspeção técnica e enviar para Expedição?")) return;
-            alert("Turbina aprovada! Encaminhada para expedição.");
-            window.location.reload();
+async function handleApproveQuality() {
+            if(!confirm("Confirmar auditoria finalizada? Esta ação notificará a Expedição.")) return;
+            
+            const btn = document.getElementById('btn-finalize-quality');
+            btn.disabled = true;
+            btn.innerText = "NOTIFICANDO EXPEDIÇÃO...";
+
+            const payload = {
+                os_id: selectedOS.os_id,
+                action: 'QUALITY_APPROVED',
+                inspector_id: '8ab0d7ed-055c-4480-a1af-eb0b08894682',
+                serial_number: document.getElementById('serial-number').innerText,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(API_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("Turbina aprovada e enviada para a Expedição!");
+                    window.location.reload();
+                } else {
+                    alert("Erro ao comunicar aprovação.");
+                    btn.disabled = false;
+                    btn.innerText = "Aprovar e Notificar Expedição";
+                }
+            } catch (e) {
+                console.error("Erro n8n:", e);
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
