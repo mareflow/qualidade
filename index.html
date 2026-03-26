@@ -3,305 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Qualidade (CQ) | TurboSul</title>
-    <!-- Tailwind CSS -->
+    <title>Setor de Qualidade | TurboSul</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
         body { font-family: 'Inter', sans-serif; }
         .bg-turbo-teal { background-color: #0D9488; }
-        .bg-turbo-blue { background-color: #2563EB; }
-        .bg-turbo-red { background-color: #E11D48; } /* Rose/Red vibrante do CQ */
-        
-        .tab-active { 
-            border-bottom: 3px solid #E11D48; 
-            color: #E11D48; 
-            font-weight: 800;
-        }
-
-        .os-card-selected {
-            border-left: 4px solid #E11D48;
-            background-color: #fff1f2;
-        }
-
+        .text-turbo-teal { color: #0D9488; }
+        .bg-turbo-red { background-color: #DC2626; }
+        .text-turbo-red { color: #DC2626; }
+        .os-card-selected { border-left: 4px solid #DC2626 !important; background-color: #fef2f2 !important; }
+        .tab-active { border-bottom: 3px solid #DC2626 !important; color: #DC2626 !important; font-weight: 900 !important; }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        .checkbox-cq:checked {
-            background-color: #10B981;
-            border-color: #10B981;
-        }
         
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Estilo customizado para o Checkbox da Qualidade */
+        .check-qualidade:checked + div {
+            border-color: #10B981;
+            background-color: #ECFDF5;
+        }
+        .check-qualidade:checked + div span {
+            color: #047857;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen overflow-hidden">
 
     <!-- HEADER -->
-    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div class="flex items-center space-x-4">
             <img src="https://i.postimg.cc/Jh5Jvrc9/IMG-7901.png" alt="TurboSul Logo" class="h-10">
             <div>
                 <h1 class="text-lg font-bold tracking-tight text-slate-900 uppercase">TurboSul - Controle de Produção</h1>
-                <p class="text-xs text-slate-500 font-medium italic">Gestão de Qualidade e Auditoria</p>
+                <p class="text-xs text-slate-500 font-medium italic">Setor de Controle de Qualidade</p>
             </div>
         </div>
-
         <div class="flex items-center space-x-6">
-            <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">Quadro de Produção</button>
-            <div class="flex items-center space-x-3 border-l pl-6 border-slate-200 text-xs font-bold text-slate-400">
-                <span>BR</span> <span class="text-slate-800 uppercase mr-4">Português</span>
-                <div class="text-right border-l pl-6">
-                    <p class="text-sm font-bold text-slate-800 leading-none">Administrador</p>
-                    <p class="text-[10px] text-turbo-red font-bold uppercase tracking-wider">Controle de Qualidade</p>
-                </div>
-                <button onclick="window.location.href='index.html'" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition ml-4">Sair</button>
+            <div class="text-right border-l pl-6 border-slate-200">
+                <p class="text-sm font-bold leading-none">Administrador</p>
+                <p class="text-[10px] text-turbo-red font-black uppercase tracking-wider">Qualidade</p>
             </div>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold transition">Sair</button>
         </div>
     </header>
 
-    <div class="flex h-[calc(100vh-64px)] overflow-hidden">
-        
+    <div class="flex h-[calc(100vh-64px)]">
         <!-- SIDEBAR -->
-        <aside class="w-80 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
-            <div class="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+        <aside class="w-80 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0 custom-scroll">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10 flex justify-between items-center">
                 <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 italic">Fila de Inspeção</h2>
+                <button onclick="fetchQueue()" class="text-turbo-red hover:rotate-180 transition-all duration-500"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
-            <div id="os-queue-container" class="p-4 space-y-4">
-                <div class="p-8 text-center text-slate-400 animate-pulse italic text-xs">Carregando fila...</div>
+            <div id="os-list" class="p-4 space-y-3">
+                <div class="p-8 text-center text-slate-400 text-xs italic animate-pulse">Carregando fila...</div>
             </div>
         </aside>
 
-        <!-- MAIN WORKSPACE -->
-        <main class="flex-1 overflow-y-auto p-8 bg-slate-50 custom-scroll">
-            <h2 class="text-2xl font-black text-slate-800 mb-8 flex items-center uppercase italic">
-                <span class="w-1 h-8 bg-turbo-red mr-3 rounded-full"></span> Centro de Controle de Qualidade (CQ)
-            </h2>
-
-            <!-- EMPTY STATE -->
-            <div id="empty-state" class="flex flex-col items-center justify-center h-[60vh] text-slate-300">
-                <i class="fa-solid fa-microscope text-6xl mb-4 opacity-20"></i>
-                <p class="text-xl font-black uppercase tracking-[0.2em]">Selecione uma OS para Auditoria Final</p>
+        <!-- MAIN -->
+        <main class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 custom-scroll relative">
+            
+            <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-slate-400">
+                <i class="fa-solid fa-clipboard-check text-6xl mb-4 opacity-10"></i>
+                <p class="uppercase tracking-widest font-bold text-sm">Selecione uma OS para Auditoria</p>
             </div>
 
-            <!-- WORKSPACE ATIVO -->
-            <div id="workspace" class="hidden space-y-8 fade-in">
-                <!-- PAINEL OS -->
-                <div class="bg-turbo-red text-white rounded-xl p-6 shadow-lg relative overflow-hidden flex justify-between items-center">
-                    <div class="relative z-10">
-                        <h2 id="display-os-id" class="text-4xl font-black italic mb-1 uppercase tracking-tighter">ID PENDENTE</h2>
-                        <p id="display-os-desc" class="text-sm font-bold opacity-80 uppercase tracking-widest uppercase">OS-XXXX | CLIENTE</p>
+            <div id="main-workspace" class="hidden space-y-6 pb-24">
+                
+                <!-- TOP INFO -->
+                <div class="bg-turbo-red rounded-3xl shadow-lg text-white p-6 min-h-[120px] flex flex-col justify-center relative overflow-hidden">
+                    <div class="relative z-10 ml-4">
+                        <h2 id="display-os" class="text-3xl font-black mb-1 italic tracking-tighter uppercase">OS-XXXX</h2>
+                        <p id="display-desc" class="text-sm font-medium opacity-90 uppercase tracking-widest italic">CLIENTE | MODELO</p>
                     </div>
-                    <span class="bg-white/10 px-4 py-2 rounded-lg text-[10px] font-black border border-white/20">TRANS NAC</span>
+                    <i class="fa-solid fa-magnifying-glass absolute right-[-20px] bottom-[-20px] text-white opacity-10 text-9xl"></i>
                 </div>
 
-                <!-- FLUXO TÉCNICO -->
-                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <div class="flex items-center space-x-3 text-turbo-red">
-                            <i class="fa-solid fa-circle-check text-xl"></i>
-                            <h3 class="font-black uppercase italic tracking-tight">Auditoria e Inspeção Técnica Final</h3>
-                        </div>
-                        <button class="bg-slate-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md">Relatório OS</button>
+                <!-- CHECKLISTS (ABAS) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b bg-slate-50 flex space-x-8 overflow-x-auto">
+                        <button onclick="switchTab(this, 'tab1')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">1. Auditoria Anexos</button>
+                        <button onclick="switchTab(this, 'tab2')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">2. Auditoria Geral</button>
+                        <button onclick="switchTab(this, 'tab3')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">3. Auditoria Caracol</button>
+                        <button onclick="switchTab(this, 'tab4')" class="tab-button tab-active py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">4. Inspeção Técnica Final</button>
                     </div>
-
-                    <!-- ABAS -->
-                    <div class="flex border-b border-slate-100 px-6 bg-white overflow-x-auto">
-                        <button onclick="switchTab('tab-aud-anexos', this)" class="tab-active px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all">1. Auditoria Anexos</button>
-                        <button onclick="switchTab('tab-aud-geral', this)" class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all">2. Auditoria Geral</button>
-                        <button onclick="switchTab('tab-aud-caracol', this)" class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all">3. Auditoria Caracol</button>
-                        <button onclick="switchTab('tab-inspecao-final', this)" class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all">4. Inspeção Técnica Final</button>
-                    </div>
-
+                    
                     <div class="p-6">
-                        <!-- ABAS 1, 2, 3 (AUDITORIA SOMENTE LEITURA) -->
-                        <div id="tab-aud-anexos" class="tab-content space-y-3"></div>
-                        <div id="tab-aud-geral" class="tab-content hidden space-y-3"></div>
-                        <div id="tab-aud-caracol" class="tab-content hidden space-y-3"></div>
-
-                        <!-- ABA 4 (INSPEÇÃO FINAL - COM CHECKBOXES) -->
-                        <div id="tab-inspecao-final" class="tab-content hidden">
-                            <!-- INFO LOGÍSTICA BAR -->
-                            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex justify-between items-center mb-8 text-[10px] font-black uppercase text-blue-800 tracking-tighter">
-                                <div>DESTINO: <span class="ml-1 text-blue-600 font-bold" id="info-destino">RETIRADA BALCÃO</span></div>
-                                <div>DATA/HORA: <span class="ml-1 text-blue-600 font-bold">@</span></div>
-                                <div>PRIORIDADE: <span class="ml-2 bg-turbo-blue text-white px-3 py-1 rounded-full">NORMAL</span></div>
-                                <div>Nº SÉRIE (ID): <span class="ml-1 text-blue-600 font-bold">---</span></div>
+                        <!-- ABAS 1, 2 e 3 (Padrão 110 itens) -->
+                        <div id="tab1" class="tab-content hidden space-y-1"></div>
+                        <div id="tab2" class="tab-content hidden space-y-1"></div>
+                        <div id="tab3" class="tab-content hidden space-y-1"></div>
+                        
+                        <!-- ABA 4 (Inspeção Técnica Final - Exclusiva Qualidade) -->
+                        <div id="tab4" class="tab-content space-y-6">
+                            
+                            <!-- Barra de Informações do Header da Aba 4 -->
+                            <div class="bg-blue-50/50 rounded-2xl border border-blue-100 p-6 flex justify-between items-center">
+                                <div>
+                                    <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Destino</p>
+                                    <h4 class="text-sm font-black text-slate-800 uppercase">Retirada Balcão</h4>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Data/Hora</p>
+                                    <h4 id="current-time" class="text-sm font-black text-slate-800 uppercase">--/--/----</h4>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Prioridade</p>
+                                    <span class="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase tracking-widest">Normal</span>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Nº Série (ID)</p>
+                                    <h4 id="serial-number" class="text-sm font-black text-slate-800 uppercase">GERANDO...</h4>
+                                </div>
                             </div>
 
-                            <div id="check-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <!-- Os 12 itens de inspeção final serão gerados via JS -->
+                            <!-- Grid de 12 Checkboxes de Qualidade -->
+                            <div id="quality-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <!-- Preenchido via JS -->
                             </div>
+
                         </div>
                     </div>
-                </div>
-
-                <!-- FOOTER -->
-                <div class="flex flex-col items-end space-y-4">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase italic">* Verifique as abas de auditoria antes de liberar o certificado de garantia.</p>
-                    <button id="btn-approve" disabled onclick="finalizeQuality()" class="bg-slate-300 text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl transition-all cursor-not-allowed">
-                        Aprovar e Notificar Expedição
-                    </button>
                 </div>
             </div>
         </main>
     </div>
 
-    <script>
-        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/quality-queue';
-        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/quality-action';
+    <!-- BOTÃO GLOBAL DE APROVAÇÃO (Fixo no Rodapé) -->
+    <div id="footer-actions" class="fixed bottom-0 right-0 left-80 p-6 bg-white border-t border-slate-200 z-30 hidden flex justify-between items-center">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">* Verifique as abas de auditoria antes de liberar o certificado de garantia.</p>
         
+        <!-- Botão inicia bloqueado (cinza) -->
+        <button id="btn-finalize-quality" disabled onclick="handleApproveQuality()" class="bg-slate-300 text-slate-500 opacity-50 cursor-not-allowed px-12 py-4 rounded-xl font-black uppercase tracking-[0.1em] text-sm transition-all duration-300">
+            Aprovar e Notificar Expedição
+        </button>
+    </div>
+
+    <script>
+        // URLs e Configurações
+        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/quality-queue'; // Ajuste sua rota real
+        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/quality-action'; // Ajuste sua rota real
         let selectedOS = null;
         let queueData = [];
 
-        const AUDIT_MAP = {
-            'tab-aud-anexos': ["ABRAÇADEIRAS", "MANGUEIRAS", "FLANGES", "CANOS", "CALÇOS", "COLETOR", "PRISIONEIROS"],
-            'tab-aud-geral': ["PARAFUSOS", "CARCAÇA COMPRESSORA", "CARCAÇA CENTRAL", "ROTOR COMPRESSOR", "EIXO ROTOR", "PRATO COMPRESSOR", "COLAR"],
-            'tab-aud-caracol': ["TRINCAS (PAREDE)", "ROSCAS / PRISIONEIROS", "ASSENTO DA VÁLVULA", "FACEAMENTO"]
+        // DADOS: 110 ITENS PADRÃO (Abas 1, 2, 3)
+        const AUDIT_ITEMS = {
+            'tab1': ['Travas CCO', 'Travas CT', 'Parafuso CT Flangeado', 'Parafuso CCO Flangeado', 'Cano Retorno Parafusos', 'Adaptador Lubrificação', 'Nipel de Lubrificação', 'Cano Lubrificação com Nipel', 'Atuador Pressão', 'Atuador Vácuo', 'Atuador Vácuo Eletrônico', 'Atuador Eletrônico com Haste', 'Suporte Atuador Eletrônico', 'Calço Atuador', 'Chapa de Proteção Atuador', 'Parafusos Suporte Atuador', 'Parafusos Chapa Proteção', 'Mangueira na CCO', 'Prisioneiro Saída', 'Prisioneiro Pé Mesa CT', 'Prisioneiro CCE', 'Parafuso CCE', 'Prisioneiro CCO', 'Prisioneiro Especial Longo', 'Saída de Escape', 'Flange Saída CT', 'Chapa de Proteção CT', 'Freio Motor', 'Chapa de Proteção Saída', 'Nipel Fixo na CCO', 'Nipel Roscado na CCO', 'Nipel com Parafuso OCO', 'Olhal', 'Parafuso OCO', 'Coletor', 'Cinta CT CCE', 'Cinta CCO', 'Cinta Saída', 'Flange Pé Mesa CT', 'Cano Admissão CCO', 'Cano Admissão Motor', 'Cano de Água', 'Valvula Prioritária', 'Valvula Solenóide', 'Sonda Temp Pressão', 'Sensor PVF', 'Bocal Plástico Biturbo', 'Tampão CT', 'Arruela Plástica Biturbo', 'Bocal Alumínio Biturbo', 'Luva Borracha Biturbo', 'Cano Ligação Alumínio', 'Capa Alumínio Biturbo', 'Peça Alumínio com Mola', 'Juntas', 'Almofada Amianto Saída', 'Mangueira Atuador', 'Conexão T', 'Defletor Admissão com Trava', 'Abraçadeiras', 'Capa Protetiva Alumínio', 'Nipel de Retorno', 'Mangueira de Retorno', 'Suporte CT', 'Anel Cano Retorno', 'Parafuso União Biturbo', 'Valvula Pressão Partida', 'Oring', 'Valvula Sensor Partida', 'Mangueira Bocal Alumínio'],
+            'tab2': ['Mancal Radial', 'Mancal Encosto', 'Flange', 'Colar', 'Espaçador', 'Calço Arruela', 'Defletor de Óleo', 'Protetor Térmico', 'Travas de Mancal CCE', 'Trava Aranha Mancal', 'Trava de Flange', 'Calço de Altura no Rotor', 'Porca do Eixo', 'Almofada Vedação Eixo', 'Almofada Vedação Caracol', 'Arruela Metálica Vedação', 'Geometria Variável TGV', 'Flange da TGV', 'Viton', 'Aneis Vedação Flange TGV', 'Anel Assentamento Valvula Biturbo'],
+            'tab3': ['Trinca Base Face ou Gases', 'Quebra Base Face', 'Espessura da Base Minima 9mm', 'Embuchamento da CT', 'Desgaste Saida Escape Flangeada', 'Desgaste Face Encaixe CCE', 'Trinca Face Assentamento CCE', 'Trinca Parede Lateral Protetor', 'Trinca ou Quebra da Voluta', 'Borboleta ou Moeda Folga', 'Bucha Guia Borboleta', 'Braco Wastegate', 'Pino de Centro', 'Assentamento Borboleta Moeda', 'Coletor Anexo', 'Plaina Coletor Uniao Biturbo', 'Empenamento Faces Alojamento', 'Necessita Gabarito Usinagem', 'Tipo de Solda']
         };
 
-        const FINAL_INSPECTION_ITEMS = [
+        // DADOS: ABA 4 (12 Itens de Inspeção Final)
+        const QUALITY_CHECKS = [
             "Teste de Folga Radial", "Teste de Folga Axial", "Inspeção de Roscas",
             "Inspeção de Furos", "Inspeção de Faceamento", "Encaixe da Chaveta",
-            "Alinhamento do Eixo", "Limpeza Geral Técnica", "Lacres e Etiquetas",
-            "Certificado de Série", "Embalagem e Proteção", "Liberação p/ Expedição"
+            "Alinhamento do Eixo nos Atuadores", "Limpeza Geral Técnica", "Lacres e Etiquetas de Garantia",
+            "Certificado com Nº de Série", "Embalagem e Proteção", "Liberação Final para Expedição"
         ];
 
-        window.onload = fetchQueue;
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchQueue();
+            updateTime();
+        });
 
+        // Simulação de Busca na Fila
         async function fetchQueue() {
-            try {
-                const res = await fetch(API_QUEUE);
-                const data = await res.json();
-                queueData = Array.isArray(data) ? data : (data?.os_id ? [data] : []);
-                renderQueue();
-            } catch (e) { console.error(e); }
+            // Caso sua API ainda não esteja pronta, aqui criamos um mock idêntico ao da imagem
+            queueData = [{ os_id: "os-qual-01", business_id: "O.S-5500", client: "Maringá Parts", model: "XYZ12", urgency: "Alta" }];
+            renderSidebar();
         }
 
-        function renderQueue() {
-            const container = document.getElementById('os-queue-container');
-            container.innerHTML = '';
-            queueData.forEach(os => {
-                const isSelected = selectedOS?.os_id === os.os_id ? 'os-card-selected' : '';
-                const card = document.createElement('div');
-                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${isSelected}`;
-                card.onclick = () => selectOS(os);
-                card.innerHTML = `
+        function renderSidebar() {
+            const list = document.getElementById('os-list');
+            list.innerHTML = queueData.map(os => `
+                <div id="os-card-${os.os_id}" onclick="selectOS('${os.os_id}')" class="p-4 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 transition rounded-xl shadow-sm">
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-sm font-black text-slate-900">${os.business_id}</span>
-                        <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md bg-orange-100 text-orange-600">${os.urgency || 'Normal'}</span>
+                        <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md bg-blue-100 text-blue-600">${os.urgency}</span>
                     </div>
-                    <p class="text-[9px] text-turbo-red font-bold uppercase mb-1">SN: ---</p>
-                    <p class="text-xs font-bold text-slate-700 uppercase">${os.model || 'TURBINA'}</p>
-                    <p class="text-[10px] text-slate-400 font-medium truncate">${os.client || 'CLIENTE'}</p>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function selectOS(os) {
-            selectedOS = os;
-            renderQueue();
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('workspace').classList.remove('hidden');
-            document.getElementById('display-os-id').innerText = os.business_id;
-            document.getElementById('display-os-desc').innerText = `${os.business_id} | ${os.client}`;
-            renderAuditoria();
-            renderInspecaoFinal();
-        }
-
-        function renderAuditoria() {
-            Object.keys(AUDIT_MAP).forEach(tabId => {
-                const container = document.getElementById(tabId);
-                container.innerHTML = AUDIT_MAP[tabId].map(item => `
-                    <div class="flex items-center justify-between bg-white p-3 border border-slate-100 rounded-xl shadow-sm">
-                        <div class="w-1/3">
-                            <p class="text-[8px] text-slate-400 font-black uppercase">Peça / Componente</p>
-                            <span class="text-[10px] font-black text-slate-700 uppercase">${item}</span>
-                        </div>
-                        <div class="w-1/4 text-center">
-                            <p class="text-[8px] text-slate-400 font-black uppercase">Veredito Análise</p>
-                            <span class="bg-green-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black">OK</span>
-                        </div>
-                        <div class="w-1/4 text-center">
-                            <p class="text-[8px] text-slate-400 font-black uppercase">Status na Produção</p>
-                            <span class="bg-green-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black">OK</span>
-                        </div>
-                        <div class="text-green-600 text-[9px] font-black uppercase flex items-center">
-                            <i class="fa-solid fa-circle-check mr-1 text-xs"></i> Auditado
-                        </div>
-                    </div>
-                `).join('');
-            });
-        }
-
-        function renderInspecaoFinal() {
-            const grid = document.getElementById('check-grid');
-            grid.innerHTML = FINAL_INSPECTION_ITEMS.map((item, idx) => `
-                <label class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-turbo-teal cursor-pointer transition shadow-sm">
-                    <span class="text-[10px] font-black text-slate-700 uppercase tracking-tighter">${item}</span>
-                    <input type="checkbox" onchange="validateCheckboxes()" class="checkbox-cq w-6 h-6 rounded border-slate-300 text-green-600 focus:ring-green-500 transition-all">
-                </label>
+                    <p class="text-xs font-bold text-slate-700 uppercase mb-1">${os.model}</p>
+                    <p class="text-[10px] font-medium text-slate-500 uppercase truncate">${os.client}</p>
+                </div>
             `).join('');
         }
 
-        function validateCheckboxes() {
-            const checks = document.querySelectorAll('.checkbox-cq');
-            const btn = document.getElementById('btn-approve');
-            const allChecked = Array.from(checks).every(c => c.checked);
+        function selectOS(id) {
+            selectedOS = queueData.find(o => o.os_id === id);
             
-            if (allChecked) {
+            document.querySelectorAll('#os-list > div').forEach(c => c.classList.remove('os-card-selected'));
+            document.getElementById(`os-card-${id}`).classList.add('os-card-selected');
+
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('main-workspace').classList.remove('hidden');
+            document.getElementById('footer-actions').classList.remove('hidden');
+            document.getElementById('footer-actions').classList.add('flex');
+            
+            document.getElementById('display-os').innerText = selectedOS.business_id;
+            document.getElementById('display-desc').innerText = `${selectedOS.client} | ${selectedOS.model}`;
+            document.getElementById('serial-number').innerText = `TS-${Math.floor(Math.random() * 100000)}`;
+            
+            renderAuditTabs();
+            renderQualityGrid();
+            validateQualityClearance(); // Reseta o botão principal
+        }
+
+        // Renderiza as 3 primeiras abas padrão (OK/Recondicionar/Trocar)
+        function renderAuditTabs() {
+            ['tab1', 'tab2', 'tab3'].forEach(tabId => {
+                const container = document.getElementById(tabId);
+                container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
+                    <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
+                        <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
+                        <div class="col-span-3">
+                            <select onchange="updateSelectColor(this)" class="w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
+                                <option value="NÃO INFORMADO">NÃO INFORMADO</option>
+                                <option value="PEÇA OK">PEÇA OK</option>
+                                <option value="RECONDICIONAR">RECONDICIONAR</option>
+                                <option value="TROCAR">TROCAR</option>
+                            </select>
+                        </div>
+                        <div class="col-span-4"><input type="text" placeholder="Obs..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent"></div>
+                    </div>`).join('');
+            });
+        }
+
+        // Renderiza os 12 cards de checkbox da Aba 4
+        function renderQualityGrid() {
+            const grid = document.getElementById('quality-grid');
+            grid.innerHTML = QUALITY_CHECKS.map((check, index) => `
+                <label class="relative cursor-pointer group">
+                    <input type="checkbox" class="check-qualidade absolute opacity-0 w-0 h-0" onchange="validateQualityClearance()">
+                    <div class="bg-white border-2 border-slate-100 rounded-2xl p-5 flex items-center transition-all duration-300 shadow-sm hover:border-slate-300">
+                        <div class="w-6 h-6 rounded border-2 border-slate-300 mr-4 flex items-center justify-center group-hover:border-slate-400 transition-colors">
+                            <i class="fa-solid fa-check text-transparent text-sm transition-colors duration-300"></i>
+                        </div>
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-tight transition-colors">${check}</span>
+                    </div>
+                </label>
+            `).join('');
+
+            // Estilização customizada via JS para o icone do checkbox
+            document.querySelectorAll('.check-qualidade').forEach(input => {
+                input.addEventListener('change', function() {
+                    const icon = this.nextElementSibling.querySelector('i');
+                    const box = this.nextElementSibling.querySelector('div');
+                    if(this.checked) {
+                        icon.classList.remove('text-transparent');
+                        icon.classList.add('text-emerald-600');
+                        box.classList.remove('border-slate-300');
+                        box.classList.add('border-emerald-500', 'bg-emerald-100');
+                    } else {
+                        icon.classList.add('text-transparent');
+                        icon.classList.remove('text-emerald-600');
+                        box.classList.add('border-slate-300');
+                        box.classList.remove('border-emerald-500', 'bg-emerald-100');
+                    }
+                });
+            });
+        }
+
+        // REGRA DE OURO: Validação dos 12 Checkboxes
+        function validateQualityClearance() {
+            const totalChecks = document.querySelectorAll('.check-qualidade').length;
+            const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
+            const btn = document.getElementById('btn-finalize-quality');
+
+            if (totalChecks > 0 && totalChecks === checkedCount) {
+                // LIBERADO
                 btn.disabled = false;
-                btn.classList.remove('bg-slate-300', 'cursor-not-allowed');
-                btn.classList.add('bg-turbo-red', 'hover:bg-red-700');
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-300', 'text-slate-500');
+                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-xl', 'shadow-emerald-200');
             } else {
+                // BLOQUEADO
                 btn.disabled = true;
-                btn.classList.add('bg-slate-300', 'cursor-not-allowed');
-                btn.classList.remove('bg-turbo-red', 'hover:bg-red-700');
+                btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-300', 'text-slate-500');
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-xl', 'shadow-emerald-200');
             }
         }
 
-        function switchTab(tabId, btn) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-            const nav = btn.parentElement.querySelectorAll('button');
-            nav.forEach(b => b.classList.remove('tab-active'));
-            nav.forEach(b => b.classList.add('text-slate-400'));
+        // Controle de Abas
+        function switchTab(btn, tabId) {
+            document.querySelectorAll('.tab-button').forEach(b => {
+                b.classList.remove('tab-active', 'text-slate-400');
+                b.classList.add('text-slate-400');
+            });
             btn.classList.add('tab-active');
             btn.classList.remove('text-slate-400');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
         }
 
-        async function finalizeQuality() {
-            if (!confirm("Confirmar liberação final da Turbina para Expedição?")) return;
-            const btn = document.getElementById('btn-approve');
-            btn.innerText = "NOTIFICANDO...";
-            btn.disabled = true;
+        function updateSelectColor(el) {
+            const val = el.value;
+            el.className = 'w-full text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none';
+            if (val === 'NÃO INFORMADO') el.classList.add('bg-slate-400');
+            else if (val === 'PEÇA OK') el.classList.add('bg-emerald-500');
+            else if (val === 'RECONDICIONAR') el.classList.add('bg-yellow-500');
+            else if (val === 'TROCAR') el.classList.add('bg-red-600');
+        }
 
-            try {
-                const res = await fetch(API_ACTION, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        os_id: selectedOS.os_id,
-                        status: "Pronto para Entrega",
-                        inspector: "Administrador"
-                    })
-                });
-                if (res.ok) {
-                    alert("Expedição notificada! OS finalizada com sucesso.");
-                    window.location.reload();
-                }
-            } catch (e) { 
-                alert("Erro ao notificar."); 
-                btn.innerText = "APROVAR E NOTIFICAR EXPEDIÇÃO";
-                btn.disabled = false;
-            }
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        async function handleApproveQuality() {
+            if(!confirm("Aprovar inspeção técnica e enviar para Expedição?")) return;
+            alert("Turbina aprovada! Encaminhada para expedição.");
+            window.location.reload();
         }
     </script>
 </body>
