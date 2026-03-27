@@ -274,28 +274,25 @@ function renderAuditTabs() {
         }
 
         // REGRA DE OURO: Validação dos 12 Checkboxes
-function validateQualityClearance() {
-            // 1. Valida se todos os 110 itens das abas 1, 2 e 3 foram auditados
-            const allSelects = document.querySelectorAll('.select-audit-final');
-            let tabsValidated = true;
-            allSelects.forEach(select => {
-                if (select.value === "NÃO INFORMADO") tabsValidated = false;
-            });
-
-            // 2. Valida se os 12 itens da inspeção técnica final (Aba 4) foram marcados
-            const totalChecks = document.querySelectorAll('.check-qualidade').length;
+// REGRA LIBERADA: Basta 1 clique para habilitar o botão de envio
+        function validateQualityClearance() {
+            // Verifica se pelo menos um checkbox da Aba 4 foi marcado
             const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
-            const step4Validated = (totalChecks > 0 && totalChecks === checkedCount);
+            
+            // Verifica se pelo menos um select das abas de auditoria foi alterado
+            const selectsAltered = Array.from(document.querySelectorAll('.select-audit-final'))
+                                       .some(select => select.value !== "NÃO INFORMADO");
 
             const btn = document.getElementById('btn-finalize-quality');
 
-            if (tabsValidated && step4Validated) {
-                // LIBERADO PARA EXPEDIÇÃO
+            // Se o inspetor marcou QUALQUER coisa, o botão libera
+            if (checkedCount > 0 || selectsAltered) {
+                // LIBERADO
                 btn.disabled = false;
                 btn.classList.remove('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
                 btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
             } else {
-                // TRAVADO
+                // TRAVADO (Só fica travado se tudo estiver em branco)
                 btn.disabled = true;
                 btn.classList.add('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
                 btn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
