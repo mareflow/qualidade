@@ -167,25 +167,29 @@
             updateTime();
         });
 
-        // BUSCA REAL NA VIEW_QUALIDADE_FILA (BLINDADA)
+        // BUSCA REAL NA VIEW_QUALIDADE_FILA (COM DIAGNÓSTICO)
         async function fetchQueue() {
             try {
+                console.log("🔍 [Qualidade] Buscando fila no endpoint:", API_QUEUE);
                 const response = await fetch(API_QUEUE);
+                
                 if (!response.ok) {
-                    console.warn("Fila de qualidade retornou status de erro:", response.status);
+                    console.warn("❌ [Qualidade] Fila retornou status de erro:", response.status);
                     queueData = [];
                     renderSidebar();
                     return;
                 }
                 
                 const text = await response.text();
-                // Só tenta converter em JSON se o servidor não tiver retornado em branco
+                console.log("🔍 [Qualidade] Resposta bruta do servidor (Texto):", text);
+
                 const data = text ? JSON.parse(text) : [];
+                console.log("✅ [Qualidade] Resposta parseada (JSON):", data);
                 
                 queueData = Array.isArray(data) ? data : (data.data || []);
                 renderSidebar();
             } catch (e) { 
-                console.error("Erro ao carregar fila de qualidade:", e); 
+                console.error("❌ [Qualidade] Erro excepcional ao carregar fila:", e); 
                 queueData = [];
                 renderSidebar();
             }
@@ -193,16 +197,34 @@
 
         function renderSidebar() {
             const list = document.getElementById('os-list');
-            list.innerHTML = queueData.map(os => `
-                <div id="os-card-${os.os_id}" onclick="selectOS('${os.os_id}')" class="p-4 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 transition rounded-xl shadow-sm">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-sm font-black text-slate-900">${os.business_id}</span>
-                        <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md bg-blue-100 text-blue-600">${os.urgency}</span>
+            console.log("🔍 [Qualidade] Renderizando Fila com os dados:", queueData);
+
+            if (!queueData || queueData.length === 0) {
+                list.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs italic">Nenhuma turbina na fila de inspeção.</div>';
+                return;
+            }
+
+            list.innerHTML = queueData.map(os => {
+                // Fallbacks inteligentes de propriedades para blindar a exibição
+                const osId = os.os_id || os.service_order_id || os.id;
+                const busId = os.business_id || os.os_codigo || 'S/N';
+                const urg = os.urgency || 'Normal';
+                const mod = os.model || os.modelo || '---';
+                const cli = os.client || os.cliente || '---';
+
+                console.log(`📦 [Qualidade] Mapeando OS na Fila - ID: ${osId}, Código: ${busId}, Modelo: ${mod}`);
+
+                return `
+                    <div id="os-card-${osId}" onclick="selectOS('${osId}')" class="p-4 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 transition rounded-xl shadow-sm">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-sm font-black text-slate-900">${busId}</span>
+                            <span class="px-2 py-0.5 text-[9px] font-black uppercase rounded-md bg-blue-100 text-blue-600">${urg}</span>
+                        </div>
+                        <p class="text-xs font-bold text-slate-700 uppercase mb-1">${mod}</p>
+                        <p class="text-[10px] font-medium text-slate-500 uppercase truncate">${cli}</p>
                     </div>
-                    <p class="text-xs font-bold text-slate-700 uppercase mb-1">${os.model}</p>
-                    <p class="text-[10px] font-medium text-slate-500 uppercase truncate">${os.client}</p>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function selectOS(id) {
