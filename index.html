@@ -27,9 +27,13 @@
         .check-qualidade:checked + div span {
             color: #047857;
         }
+        .check-qualidade:checked + div .fa-check {
+             color: #059669;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen overflow-hidden">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- HEADER -->
     <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
@@ -95,7 +99,6 @@
                         <!-- ABA 4 (Inspeção Técnica Final - Exclusiva Qualidade) -->
                         <div id="tab4" class="tab-content space-y-6">
                             
-                            <!-- Barra de Informações do Header da Aba 4 -->
                             <div class="bg-blue-50/50 rounded-2xl border border-blue-100 p-6 flex justify-between items-center">
                                 <div>
                                     <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Destino</p>
@@ -107,7 +110,7 @@
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Prioridade</p>
-                                    <span class="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase tracking-widest">Normal</span>
+                                    <span id="display-urgency" class="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase tracking-widest">Normal</span>
                                 </div>
                                 <div>
                                     <p class="text-[9px] font-black text-blue-800 uppercase tracking-widest mb-1">Nº Série (ID)</p>
@@ -115,9 +118,15 @@
                                 </div>
                             </div>
 
-                            <!-- Grid de 12 Checkboxes de Qualidade -->
                             <div id="quality-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <!-- Preenchido via JS -->
+                            </div>
+
+                            <!-- [NOVO] BOTÃO DE SALVAR CHECKLIST -->
+                             <div class="pt-6 border-t border-slate-100 mt-6 flex justify-end">
+                                <button id="btn-salvar-checklist" disabled onclick="saveQualityChecklist()" class="bg-amber-300 text-amber-800 cursor-not-allowed font-bold py-4 px-8 rounded-xl transition duration-200 uppercase text-xs tracking-wider shadow-md flex items-center justify-center">
+                                    <i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Checklist para Liberar Aprovação
+                                </button>
                             </div>
 
                         </div>
@@ -131,7 +140,6 @@
     <div id="footer-actions" class="fixed bottom-0 right-0 left-80 p-6 bg-white border-t border-slate-200 z-30 hidden flex justify-between items-center">
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">* Verifique as abas de auditoria antes de liberar o certificado de garantia.</p>
         
-        <!-- Botão inicia bloqueado (cinza) -->
         <button id="btn-finalize-quality" disabled onclick="handleApproveQuality()" class="bg-slate-300 text-slate-500 opacity-50 cursor-not-allowed px-12 py-4 rounded-xl font-black uppercase tracking-[0.1em] text-sm transition-all duration-300">
             Aprovar e Notificar Expedição
         </button>
@@ -139,18 +147,19 @@
 
     <script>
         // URLs e Configurações
-        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/quality-queue'; // Ajuste sua rota real
-        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/quality-action'; // Ajuste sua rota real
+        const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/quality-queue';
+        const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/quality-action';
         let selectedOS = null;
         let queueData = [];
 
-        // DADOS: 110 ITENS PADRÃO (Abas 1, 2, 3)
         const AUDIT_ITEMS = {
             'tab1': ['Travas CCO', 'Travas CT', 'Parafuso CT Flangeado', 'Parafuso CCO Flangeado', 'Cano Retorno Parafusos', 'Adaptador Lubrificação', 'Nipel de Lubrificação', 'Cano Lubrificação com Nipel', 'Atuador Pressão', 'Atuador Vácuo', 'Atuador Vácuo Eletrônico', 'Atuador Eletrônico com Haste', 'Suporte Atuador Eletrônico', 'Calço Atuador', 'Chapa de Proteção Atuador', 'Parafusos Suporte Atuador', 'Parafusos Chapa Proteção', 'Mangueira na CCO', 'Prisioneiro Saída', 'Prisioneiro Pé Mesa CT', 'Prisioneiro CCE', 'Parafuso CCE', 'Prisioneiro CCO', 'Parafuso CCO', 'Prisioneiro Especial Longo', 'Saída de Escape', 'Flange Saída CT', 'Chapa de Proteção CT', 'Freio Motor', 'Chapa de Proteção Saída', 'Nipel Fixo na CCO', 'Nipel Roscado na CCO', 'Nipel com Parafuso OCO', 'Olhal', 'Parafuso OCO', 'Coletor', 'Cinta CT CCE', 'Cinta CCO', 'Cinta Saída', 'Flange Pé Mesa CT', 'Cano Admissão CCO', 'Cano Admissão Motor', 'Cano de Água', 'Valvula Prioritária', 'Valvula Solenóide', 'Sonda Temp Pressão', 'Sensor PVF', 'Bocal Plástico Biturbo', 'Tampão CT', 'Arruela Plástica Biturbo', 'Bocal Alumínio Biturbo', 'Luva Borracha Biturbo', 'Cano Ligação Alumínio', 'Capa Alumínio Biturbo', 'Peça Alumínio com Mola', 'Juntas', 'Almofada Amianto Saída', 'Mangueira Atuador', 'Conexão T', 'Defletor Admissão com Trava', 'Abraçadeiras', 'Capa Protetiva Alumínio', 'Nipel de Retorno', 'Mangueira de Retorno', 'Suporte CT', 'Anel Cano Retorno', 'Parafuso União Biturbo', 'Valvula Pressão Partida', 'Oring', 'Valvula Sensor Partida', 'Mangueira Bocal Alumínio'],
             'tab2': ['Mancal Radial', 'Mancal Encosto', 'Flange', 'Colar', 'Espaçador', 'Calço Arruela', 'Defletor de Óleo', 'Protetor Térmico', 'Travas de Mancal CCE', 'Trava Aranha Mancal', 'Trava de Flange', 'Calço de Altura no Rotor', 'Porca do Eixo', 'Almofada Vedação Eixo', 'Almofada Vedação Caracol', 'Arruela Metálica Vedação', 'Geometria Variável TGV', 'Flange da TGV', 'Viton', 'Aneis Vedação Flange TGV', 'Anel Assentamento Valvula Biturbo']
         };
 
-        // DADOS: ABA 4 (12 Itens de Inspeção Final)
         const QUALITY_CHECKS = [
             "Teste de Folga Radial", "Teste de Folga Axial", "Inspeção de Roscas",
             "Inspeção de Furos", "Inspeção de Faceamento", "Encaixe da Chaveta",
@@ -161,31 +170,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             fetchQueue();
             updateTime();
+            setInterval(updateTime, 60000); // Atualiza a cada minuto
         });
 
-        // BUSCA REAL NA VIEW_QUALIDADE_FILA (COM DIAGNÓSTICO)
         async function fetchQueue() {
             try {
-                console.log("🔍 [Qualidade] Buscando fila no endpoint:", API_QUEUE);
                 const response = await fetch(API_QUEUE);
-                
-                if (!response.ok) {
-                    console.warn("❌ [Qualidade] Fila retornou status de erro:", response.status);
-                    queueData = [];
-                    renderSidebar();
-                    return;
-                }
-                
-                const text = await response.text();
-                console.log("🔍 [Qualidade] Resposta bruta do servidor (Texto):", text);
-
-                const data = text ? JSON.parse(text) : [];
-                console.log("✅ [Qualidade] Resposta parseada (JSON):", data);
-                
+                const data = await response.json();
                 queueData = Array.isArray(data) ? data : (data.data || []);
                 renderSidebar();
-            } catch (e) { 
-                console.error("❌ [Qualidade] Erro excepcional ao carregar fila:", e); 
+            } catch (e) {
+                console.error("Erro ao carregar fila da Qualidade:", e); 
                 queueData = [];
                 renderSidebar();
             }
@@ -193,22 +188,17 @@
 
         function renderSidebar() {
             const list = document.getElementById('os-list');
-            console.log("🔍 [Qualidade] Renderizando Fila com os dados:", queueData);
-
             if (!queueData || queueData.length === 0) {
                 list.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs italic">Nenhuma turbina na fila de inspeção.</div>';
                 return;
             }
 
             list.innerHTML = queueData.map(os => {
-                // Fallbacks inteligentes de propriedades para blindar a exibição
                 const osId = os.os_id || os.service_order_id || os.id;
-                const busId = os.business_id || os.os_codigo || 'S/N';
+                const busId = os.business_id || 'S/N';
                 const urg = os.urgency || 'Normal';
-                const mod = os.model || os.modelo || '---';
-                const cli = os.client || os.cliente || '---';
-
-                console.log(`📦 [Qualidade] Mapeando OS na Fila - ID: ${osId}, Código: ${busId}, Modelo: ${mod}`);
+                const mod = os.model || '---';
+                const cli = os.client || '---';
 
                 return `
                     <div id="os-card-${osId}" onclick="selectOS('${osId}')" class="p-4 cursor-pointer bg-white border-l-4 border-transparent hover:bg-slate-50 transition rounded-xl shadow-sm">
@@ -224,7 +214,7 @@
         }
 
         function selectOS(id) {
-            selectedOS = queueData.find(o => o.os_id === id);
+            selectedOS = queueData.find(o => (o.os_id || o.service_order_id || o.id) === id);
             
             document.querySelectorAll('#os-list > div').forEach(c => c.classList.remove('os-card-selected'));
             document.getElementById(`os-card-${id}`).classList.add('os-card-selected');
@@ -236,26 +226,25 @@
             
             document.getElementById('display-os').innerText = selectedOS.business_id;
             document.getElementById('display-desc').innerText = `${selectedOS.client} | ${selectedOS.model}`;
-            
-            // Dados vindos da View_Qualidade_Fila
             document.getElementById('serial-number').innerText = selectedOS.serial_number || 'N/A';
+            document.getElementById('display-urgency').innerText = selectedOS.urgency || 'Normal';
+            
             const destinoLabel = document.querySelector('#tab4 .bg-blue-50\\/50 h4');
             if(destinoLabel) destinoLabel.innerText = selectedOS.destino || 'RETIRADA BALCÃO';
             
-            renderAuditTabs(); // Agora vai usar os dados do selectedOS.auditoria_geral
+            renderAuditTabs();
             renderQualityGrid();
-            validateQualityClearance();
+            validateQualityClearance(); // Valida o estado inicial dos botões
         }
 
-        // Renderiza as 3 primeiras abas padrão (OK/Recondicionar/Trocar)
-function renderAuditTabs() {
+        function renderAuditTabs() {
             ['tab1', 'tab2'].forEach(tabId => {
                 const container = document.getElementById(tabId);
                 container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
                     <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
                         <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
                         <div class="col-span-3">
-                            <select onchange="updateSelectColor(this); validateQualityClearance();" class="select-audit-final w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
+                            <select onchange="updateSelectColor(this);" class="select-audit-final w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
                                 <option value="NÃO INFORMADO">NÃO INFORMADO</option>
                                 <option value="PEÇA OK">PEÇA OK</option>
                                 <option value="RECONDICIONAR">RECONDICIONAR</option>
@@ -267,10 +256,9 @@ function renderAuditTabs() {
             });
         }
 
-        // Renderiza os 12 cards de checkbox da Aba 4
         function renderQualityGrid() {
             const grid = document.getElementById('quality-grid');
-            grid.innerHTML = QUALITY_CHECKS.map((check, index) => `
+            grid.innerHTML = QUALITY_CHECKS.map((check) => `
                 <label class="relative cursor-pointer group">
                     <input type="checkbox" class="check-qualidade absolute opacity-0 w-0 h-0" onchange="validateQualityClearance()">
                     <div class="bg-white border-2 border-slate-100 rounded-2xl p-5 flex items-center transition-all duration-300 shadow-sm hover:border-slate-300">
@@ -281,62 +269,141 @@ function renderAuditTabs() {
                     </div>
                 </label>
             `).join('');
-
-            // Estilização customizada via JS para o icone do checkbox
-            document.querySelectorAll('.check-qualidade').forEach(input => {
-                input.addEventListener('change', function() {
-                    const icon = this.nextElementSibling.querySelector('i');
-                    const box = this.nextElementSibling.querySelector('div');
-                    if(this.checked) {
-                        icon.classList.remove('text-transparent');
-                        icon.classList.add('text-emerald-600');
-                        box.classList.remove('border-slate-300');
-                        box.classList.add('border-emerald-500', 'bg-emerald-100');
-                    } else {
-                        icon.classList.add('text-transparent');
-                        icon.classList.remove('text-emerald-600');
-                        box.classList.add('border-slate-300');
-                        box.classList.remove('border-emerald-500', 'bg-emerald-100');
-                    }
-                });
-            });
         }
 
-        // REGRA OBRIGATÓRIA: Os 12 Checkboxes da Inspeção Técnica Final (Aba 3) devem estar TODOS marcados para habilitar o botão.
-        // As abas 1 e 2 de Auditoria de Anexos/Geral são opcionais e podem conter itens como "NÃO INFORMADO".
         function validateQualityClearance() {
-            const totalCheckboxes = document.querySelectorAll('.check-qualidade').length;
+            const totalCheckboxes = QUALITY_CHECKS.length;
             const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
+            const btnSave = document.getElementById('btn-salvar-checklist');
 
-            const btn = document.getElementById('btn-finalize-quality');
-
-            // Habilita o botão somente se todos os 12 testes finais de qualidade estiverem confirmados
-            if (checkedCount === totalCheckboxes && totalCheckboxes > 0) {
-                btn.disabled = false;
-                btn.classList.remove('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
-                btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
+            if (checkedCount === totalCheckboxes) {
+                btnSave.disabled = false;
+                btnSave.classList.remove('bg-amber-300', 'text-amber-800', 'cursor-not-allowed');
+                btnSave.classList.add('bg-amber-500', 'text-white', 'hover:bg-amber-600');
             } else {
-                btn.disabled = true;
-                btn.classList.add('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
-                btn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
+                btnSave.disabled = true;
+                btnSave.classList.add('bg-amber-300', 'text-amber-800', 'cursor-not-allowed');
+                btnSave.classList.remove('bg-amber-500', 'text-white', 'hover:bg-amber-600');
+            }
+        }
+        
+        async function saveQualityChecklist() {
+            const btn = document.getElementById('btn-salvar-checklist');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> Validando e Salvando...`;
+
+            const qualityChecks = Array.from(document.querySelectorAll('.check-qualidade')).map((input, index) => ({
+                item: QUALITY_CHECKS[index],
+                ok: input.checked
+            }));
+
+            try {
+                // Placeholder para lógica de divergência
+                const hasDivergence = false; 
+
+                const executeSave = async (isAuthorized = false, supervisor = "") => {
+                    const response = await fetch(API_ACTION, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            os_id: selectedOS.os_id, 
+                            checks: qualityChecks,
+                            action: 'SAVE_QUALITY_CHECKLIST',
+                            authorized_by: supervisor 
+                        })
+                    });
+
+                    if (response.ok) {
+                        alert("✅ Checklist de Qualidade salvo com sucesso!");
+                        const btnFinalize = document.getElementById('btn-finalize-quality');
+                        btnFinalize.disabled = false;
+                        btnFinalize.classList.remove('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
+                        btnFinalize.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl');
+                        btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Checklist Salvo`;
+                        btn.classList.add('bg-emerald-600', 'text-white');
+                    } else {
+                        throw new Error('Falha ao salvar o checklist.');
+                    }
+                };
+
+                if (hasDivergence) {
+                    document.getElementById('modal-supervisor').style.display = 'flex';
+                    document.getElementById('btn-confirm-supervisor').onclick = () => {
+                        const pass = document.getElementById('input-supervisor-password').value;
+                        if(pass === 'TURBOSUL2026') {
+                            executeSave(true, "Supervisor Qualidade");
+                            closeSupervisorModal();
+                        } else { alert("Senha incorreta"); }
+                    };
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Checklist para Liberar Aprovação`;
+
+                } else {
+                    await executeSave(false);
+                }
+            } catch (e) {
+                alert("❌ Erro ao salvar o checklist. Tente novamente.");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Checklist para Liberar Aprovação`;
+                console.error("Erro ao salvar:", e);
             }
         }
 
-        // Controle de Abas
+        function handleApproveQuality() {
+            if (!selectedOS) return;
+            document.getElementById('quality-modal').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('quality-modal-card').classList.remove('scale-95', 'opacity-0');
+            }, 10);
+
+            document.getElementById('quality-modal-confirm-btn').onclick = async () => {
+                closeQualityModal();
+                await executeQualityApproval(); 
+            };
+        }
+
+        async function executeQualityApproval() {
+            const btn = document.getElementById('btn-finalize-quality');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> NOTIFICANDO EXPEDIÇÃO...`;
+
+            try {
+                const response = await fetch(API_ACTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        os_id: selectedOS.os_id,
+                        action: 'QUALITY_APPROVED',
+                        inspector_id: '8ab0d7ed-055c-4480-a1af-eb0b08894682',
+                        serial_number: document.getElementById('serial-number').innerText,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (response.ok) {
+                    alert("✅ Turbina aprovada e enviada para a Expedição!");
+                    window.location.reload();
+                } else {
+                    throw new Error('Falha na notificação para a expedição.');
+                }
+            } catch (e) {
+                console.error("Erro na aprovação final:", e);
+                alert("❌ Falha de conexão com o servidor. A aprovação não foi concluída.");
+                btn.disabled = false;
+                btn.innerText = "Aprovar e Notificar Expedição";
+            }
+        }
+
         function switchTab(btn, tabId) {
-            document.querySelectorAll('.tab-button').forEach(b => {
-                b.classList.remove('tab-active', 'text-slate-400');
-                b.classList.add('text-slate-400');
-            });
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('tab-active'));
             btn.classList.add('tab-active');
-            btn.classList.remove('text-slate-400');
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
         }
 
         function updateSelectColor(el) {
             const val = el.value;
-            el.className = 'w-full text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none';
+            el.className = 'select-audit-final w-full text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none';
             if (val === 'NÃO INFORMADO') el.classList.add('bg-slate-400');
             else if (val === 'PEÇA OK') el.classList.add('bg-emerald-500');
             else if (val === 'RECONDICIONAR') el.classList.add('bg-yellow-500');
@@ -347,74 +414,18 @@ function renderAuditTabs() {
             const now = new Date();
             document.getElementById('current-time').innerText = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
         }
-		
-		function updateTime() {
-            const now = new Date();
-            document.getElementById('current-time').innerText = now.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-        }
 
         function closeQualityModal() {
             const modal = document.getElementById('quality-modal');
             const card = document.getElementById('quality-modal-card');
             if(card) card.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                if(modal) modal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => { if(modal) modal.classList.add('hidden'); }, 300);
         }
 
-function handleApproveQuality() {
-            if (!selectedOS) return;
-            
-            const modal = document.getElementById('quality-modal');
-            const card = document.getElementById('quality-modal-card');
-            
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                card.classList.remove('scale-95', 'opacity-0');
-            }, 10);
-
-            // Configura o botão de confirmação do modal
-            document.getElementById('quality-modal-confirm-btn').onclick = async () => {
-                closeQualityModal();
-                await executeQualityApproval(); 
-            };
+        function closeSupervisorModal() {
+            document.getElementById('modal-supervisor').style.display = 'none';
         }
 
-        // Lógica de envio para o n8n
-        async function executeQualityApproval() {
-            const btn = document.getElementById('btn-finalize-quality');
-            btn.disabled = true;
-            btn.innerText = "NOTIFICANDO EXPEDIÇÃO...";
-
-            const payload = {
-                os_id: selectedOS.os_id,
-                action: 'QUALITY_APPROVED',
-                inspector_id: '8ab0d7ed-055c-4480-a1af-eb0b08894682',
-                serial_number: document.getElementById('serial-number').innerText,
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                const response = await fetch(API_ACTION, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert("✅ Turbina aprovada e enviada para a Expedição!");
-                    window.location.reload();
-                } else {
-                    alert("❌ Erro ao comunicar aprovação.");
-                    btn.disabled = false;
-                    btn.innerText = "Aprovar e Notificar Expedição";
-                }
-            } catch (e) {
-                console.error("Erro n8n:", e);
-                alert("❌ Falha de conexão com o servidor.");
-                btn.disabled = false;
-            }
-        }
     </script>
 	
 	<!-- MODAL CUSTOMIZADO QUALIDADE -->
@@ -430,6 +441,22 @@ function handleApproveQuality() {
             <div class="flex gap-3">
                 <button onclick="closeQualityModal()" class="flex-1 py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition">Voltar</button>
                 <button id="quality-modal-confirm-btn" class="flex-1 py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition transform active:scale-95">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SENHA DO SUPERVISOR -->
+    <div id="modal-supervisor" style="display: none;" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center border-t-8 border-red-500">
+            <div class="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-key text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Divergência Detectada!</h3>
+            <p id="modal-supervisor-desc" class="text-[11px] text-slate-500 font-medium italic mb-6">Os vereditos selecionados divergem da Análise Técnica. Digite a senha do líder para autorizar.</p>
+            <input type="password" id="input-supervisor-password" placeholder="Digite a senha..." class="w-full bg-slate-100 border-2 border-transparent focus:border-red-500 rounded-2xl px-5 py-3 text-sm font-bold text-center outline-none mb-6">
+            <div class="flex space-x-3">
+                <button type="button" onclick="closeSupervisorModal()" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200">Cancelar</button>
+                <button type="button" id="btn-confirm-supervisor" class="flex-[2] bg-red-600 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-lg hover:bg-red-700">Autorizar</button>
             </div>
         </div>
     </div>
