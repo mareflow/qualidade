@@ -85,15 +85,12 @@
                     <div class="p-4 border-b bg-slate-50 flex space-x-8 overflow-x-auto">
                         <button onclick="switchTab(this, 'tab1')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">1. Auditoria Anexos</button>
                         <button onclick="switchTab(this, 'tab2')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">2. Auditoria Geral</button>
-                        <button onclick="switchTab(this, 'tab3')" class="tab-button text-slate-400 py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">3. Auditoria Caracol</button>
-                        <button onclick="switchTab(this, 'tab4')" class="tab-button tab-active py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">4. Inspeção Técnica Final</button>
+                        <button onclick="switchTab(this, 'tab4')" class="tab-button tab-active py-3 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all">3. Inspeção Técnica Final</button>
                     </div>
                     
                     <div class="p-6">
-                        <!-- ABAS 1, 2 e 3 (Padrão 110 itens) -->
                         <div id="tab1" class="tab-content hidden space-y-1"></div>
                         <div id="tab2" class="tab-content hidden space-y-1"></div>
-                        <div id="tab3" class="tab-content hidden space-y-1"></div>
                         
                         <!-- ABA 4 (Inspeção Técnica Final - Exclusiva Qualidade) -->
                         <div id="tab4" class="tab-content space-y-6">
@@ -149,9 +146,8 @@
 
         // DADOS: 110 ITENS PADRÃO (Abas 1, 2, 3)
         const AUDIT_ITEMS = {
-            'tab1': ['Travas CCO', 'Travas CT', 'Parafuso CT Flangeado', 'Parafuso CCO Flangeado', 'Cano Retorno Parafusos', 'Adaptador Lubrificação', 'Nipel de Lubrificação', 'Cano Lubrificação com Nipel', 'Atuador Pressão', 'Atuador Vácuo', 'Atuador Vácuo Eletrônico', 'Atuador Eletrônico com Haste', 'Suporte Atuador Eletrônico', 'Calço Atuador', 'Chapa de Proteção Atuador', 'Parafusos Suporte Atuador', 'Parafusos Chapa Proteção', 'Mangueira na CCO', 'Prisioneiro Saída', 'Prisioneiro Pé Mesa CT', 'Prisioneiro CCE', 'Parafuso CCE', 'Prisioneiro CCO', 'Prisioneiro Especial Longo', 'Saída de Escape', 'Flange Saída CT', 'Chapa de Proteção CT', 'Freio Motor', 'Chapa de Proteção Saída', 'Nipel Fixo na CCO', 'Nipel Roscado na CCO', 'Nipel com Parafuso OCO', 'Olhal', 'Parafuso OCO', 'Coletor', 'Cinta CT CCE', 'Cinta CCO', 'Cinta Saída', 'Flange Pé Mesa CT', 'Cano Admissão CCO', 'Cano Admissão Motor', 'Cano de Água', 'Valvula Prioritária', 'Valvula Solenóide', 'Sonda Temp Pressão', 'Sensor PVF', 'Bocal Plástico Biturbo', 'Tampão CT', 'Arruela Plástica Biturbo', 'Bocal Alumínio Biturbo', 'Luva Borracha Biturbo', 'Cano Ligação Alumínio', 'Capa Alumínio Biturbo', 'Peça Alumínio com Mola', 'Juntas', 'Almofada Amianto Saída', 'Mangueira Atuador', 'Conexão T', 'Defletor Admissão com Trava', 'Abraçadeiras', 'Capa Protetiva Alumínio', 'Nipel de Retorno', 'Mangueira de Retorno', 'Suporte CT', 'Anel Cano Retorno', 'Parafuso União Biturbo', 'Valvula Pressão Partida', 'Oring', 'Valvula Sensor Partida', 'Mangueira Bocal Alumínio'],
-            'tab2': ['Mancal Radial', 'Mancal Encosto', 'Flange', 'Colar', 'Espaçador', 'Calço Arruela', 'Defletor de Óleo', 'Protetor Térmico', 'Travas de Mancal CCE', 'Trava Aranha Mancal', 'Trava de Flange', 'Calço de Altura no Rotor', 'Porca do Eixo', 'Almofada Vedação Eixo', 'Almofada Vedação Caracol', 'Arruela Metálica Vedação', 'Geometria Variável TGV', 'Flange da TGV', 'Viton', 'Aneis Vedação Flange TGV', 'Anel Assentamento Valvula Biturbo'],
-            'tab3': ['Trinca Base Face ou Gases', 'Quebra Base Face', 'Espessura da Base Minima 9mm', 'Embuchamento da CT', 'Desgaste Saida Escape Flangeada', 'Desgaste Face Encaixe CCE', 'Trinca Face Assentamento CCE', 'Trinca Parede Lateral Protetor', 'Trinca ou Quebra da Voluta', 'Borboleta ou Moeda Folga', 'Bucha Guia Borboleta', 'Braco Wastegate', 'Pino de Centro', 'Assentamento Borboleta Moeda', 'Coletor Anexo', 'Plaina Coletor Uniao Biturbo', 'Empenamento Faces Alojamento', 'Necessita Gabarito Usinagem', 'Tipo de Solda']
+            'tab1': ['Travas CCO', 'Travas CT', 'Parafuso CT Flangeado', 'Parafuso CCO Flangeado', 'Cano Retorno Parafusos', 'Adaptador Lubrificação', 'Nipel de Lubrificação', 'Cano Lubrificação com Nipel', 'Atuador Pressão', 'Atuador Vácuo', 'Atuador Vácuo Eletrônico', 'Atuador Eletrônico com Haste', 'Suporte Atuador Eletrônico', 'Calço Atuador', 'Chapa de Proteção Atuador', 'Parafusos Suporte Atuador', 'Parafusos Chapa Proteção', 'Mangueira na CCO', 'Prisioneiro Saída', 'Prisioneiro Pé Mesa CT', 'Prisioneiro CCE', 'Parafuso CCE', 'Prisioneiro CCO', 'Parafuso CCO', 'Prisioneiro Especial Longo', 'Saída de Escape', 'Flange Saída CT', 'Chapa de Proteção CT', 'Freio Motor', 'Chapa de Proteção Saída', 'Nipel Fixo na CCO', 'Nipel Roscado na CCO', 'Nipel com Parafuso OCO', 'Olhal', 'Parafuso OCO', 'Coletor', 'Cinta CT CCE', 'Cinta CCO', 'Cinta Saída', 'Flange Pé Mesa CT', 'Cano Admissão CCO', 'Cano Admissão Motor', 'Cano de Água', 'Valvula Prioritária', 'Valvula Solenóide', 'Sonda Temp Pressão', 'Sensor PVF', 'Bocal Plástico Biturbo', 'Tampão CT', 'Arruela Plástica Biturbo', 'Bocal Alumínio Biturbo', 'Luva Borracha Biturbo', 'Cano Ligação Alumínio', 'Capa Alumínio Biturbo', 'Peça Alumínio com Mola', 'Juntas', 'Almofada Amianto Saída', 'Mangueira Atuador', 'Conexão T', 'Defletor Admissão com Trava', 'Abraçadeiras', 'Capa Protetiva Alumínio', 'Nipel de Retorno', 'Mangueira de Retorno', 'Suporte CT', 'Anel Cano Retorno', 'Parafuso União Biturbo', 'Valvula Pressão Partida', 'Oring', 'Valvula Sensor Partida', 'Mangueira Bocal Alumínio'],
+            'tab2': ['Mancal Radial', 'Mancal Encosto', 'Flange', 'Colar', 'Espaçador', 'Calço Arruela', 'Defletor de Óleo', 'Protetor Térmico', 'Travas de Mancal CCE', 'Trava Aranha Mancal', 'Trava de Flange', 'Calço de Altura no Rotor', 'Porca do Eixo', 'Almofada Vedação Eixo', 'Almofada Vedação Caracol', 'Arruela Metálica Vedação', 'Geometria Variável TGV', 'Flange da TGV', 'Viton', 'Aneis Vedação Flange TGV', 'Anel Assentamento Valvula Biturbo']
         };
 
         // DADOS: ABA 4 (12 Itens de Inspeção Final)
@@ -253,7 +249,7 @@
 
         // Renderiza as 3 primeiras abas padrão (OK/Recondicionar/Trocar)
 function renderAuditTabs() {
-            ['tab1', 'tab2', 'tab3'].forEach(tabId => {
+            ['tab1', 'tab2'].forEach(tabId => {
                 const container = document.getElementById(tabId);
                 container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
                     <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
@@ -306,26 +302,20 @@ function renderAuditTabs() {
             });
         }
 
-        // REGRA DE OURO: Validação dos 12 Checkboxes
-// REGRA LIBERADA: Basta 1 clique para habilitar o botão de envio
+        // REGRA OBRIGATÓRIA: Os 12 Checkboxes da Inspeção Técnica Final (Aba 3) devem estar TODOS marcados para habilitar o botão.
+        // As abas 1 e 2 de Auditoria de Anexos/Geral são opcionais e podem conter itens como "NÃO INFORMADO".
         function validateQualityClearance() {
-            // Verifica se pelo menos um checkbox da Aba 4 foi marcado
+            const totalCheckboxes = document.querySelectorAll('.check-qualidade').length;
             const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
-            
-            // Verifica se pelo menos um select das abas de auditoria foi alterado
-            const selectsAltered = Array.from(document.querySelectorAll('.select-audit-final'))
-                                       .some(select => select.value !== "NÃO INFORMADO");
 
             const btn = document.getElementById('btn-finalize-quality');
 
-            // Se o inspetor marcou QUALQUER coisa, o botão libera
-            if (checkedCount > 0 || selectsAltered) {
-                // LIBERADO
+            // Habilita o botão somente se todos os 12 testes finais de qualidade estiverem confirmados
+            if (checkedCount === totalCheckboxes && totalCheckboxes > 0) {
                 btn.disabled = false;
                 btn.classList.remove('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
                 btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
             } else {
-                // TRAVADO (Só fica travado se tudo estiver em branco)
                 btn.disabled = true;
                 btn.classList.add('bg-slate-300', 'text-slate-500', 'opacity-50', 'cursor-not-allowed');
                 btn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700', 'shadow-xl', 'cursor-pointer');
