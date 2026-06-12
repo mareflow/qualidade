@@ -96,6 +96,13 @@
                         <div id="tab1" class="tab-content hidden space-y-1"></div>
                         <div id="tab2" class="tab-content hidden space-y-1"></div>
                         
+                        <!-- NOVO: AÇÕES DA AUDITORIA (Visível apenas nas Abas 1 e 2) -->
+                        <div id="audit-actions" class="hidden pt-6 border-t border-slate-100 mt-4 flex justify-end">
+                            <button type="button" id="btn-salvar-auditoria" onclick="saveAuditChecklist()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 uppercase text-xs tracking-wider shadow-md flex items-center justify-center">
+                                <i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)
+                            </button>
+                        </div>
+                        
                         <!-- ABA 4 (Inspeção Técnica Final - Exclusiva Qualidade) -->
                         <div id="tab4" class="tab-content space-y-6">
                             
@@ -232,6 +239,18 @@
             const destinoLabel = document.querySelector('#tab4 .bg-blue-50\\/50 h4');
             if(destinoLabel) destinoLabel.innerText = selectedOS.destino || 'RETIRADA BALCÃO';
             
+            // Garante que a aba de Inspeção Final (Aba 3) está desbloqueada ao carregar uma nova OS
+            const tab4 = document.getElementById('tab4');
+            if(tab4) tab4.classList.remove('opacity-40', 'pointer-events-none', 'grayscale');
+
+            // Reseta visual do botão de auditoria caso venha de outra OS finalizada
+            const btnAuditoria = document.getElementById('btn-salvar-auditoria');
+            if(btnAuditoria) {
+                btnAuditoria.disabled = false;
+                btnAuditoria.className = 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 uppercase text-xs tracking-wider shadow-md flex items-center justify-center';
+                btnAuditoria.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)';
+            }
+
             renderAuditTabs();
             renderQualityGrid();
             validateQualityClearance(); // Valida o estado inicial dos botões
@@ -287,6 +306,132 @@
             }
         }
         
+        // LÓGICA DE SALVAMENTO DA AUDITORIA (ABAS 1 E 2) COM VERIFICAÇÃO DE DIVERGÊNCIA
+        async function saveAuditChecklist() {
+            if (!selectedOS) return false;
+            
+            const btn = document.getElementById('btn-salvar-auditoria');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> Verificando Divergências...`;
+
+            const rows = [];
+            document.querySelectorAll('.select-audit-final').forEach(select => {
+                const itemName = select.parentElement.previousElementSibling.innerText;
+                const obsInput = select.parentElement.nextElementSibling.querySelector('input');
+                const statusValue = select.value;
+                
+                if (statusValue !== 'NÃO INFORMADO') {
+                    rows.push({
+                        service_order_id: selectedOS.os_id || selectedOS.id,
+                        item_name: itemName.toUpperCase().trim(),
+                        status: statusValue,
+                        observation: obsInput ? obsInput.value.trim() : ''
+                    });
+                }
+            });
+
+            if (rows.length === 0) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)';
+                alert('Preencha ao menos um item da auditoria antes de salvar.');
+                return false;
+            }
+
+            try {
+                // 1. Busca baseline da Análise Técnica
+                const { data: baseline, error: baselineError } = await supabaseClient
+                    .from('checklist_analysis_general')
+                    .select('item_name, status')
+                    .eq('service_order_id', selectedOS.os_id || selectedOS.id);
+
+                if (baselineError) throw baselineError;
+
+                // 2. Compara valores para achar divergências
+                let hasDivergence = false;
+                const divergentItems = [];
+
+                rows.forEach(item => {
+                    const baseItem = baseline && baseline.find(b => b.item_name.toUpperCase().trim() === item.item_name.toUpperCase().trim());
+                    const baseStatus = baseItem ? baseItem.status.toUpperCase().trim() : 'NÃO INFORMADO';
+                    const newStatus = item.status.toUpperCase().trim();
+
+                    if (baseStatus !== newStatus) {
+                        if (baseStatus === 'NÃO INFORMADO' && newStatus === 'PEÇA OK') {
+                            // Aceitável
+                        } else {
+                            hasDivergence = true;
+                            divergentItems.push(`${item.item_name} (Análise: ${baseStatus} | Qualidade: ${newStatus})`);
+                        }
+                    }
+                });
+
+                const executeSaveAudit = async (isAuthorized = false, supervisorName = "") => {
+                    const { error } = await supabaseClient
+                        .from('checklist_qualidade') // Salva na tabela específica da qualidade
+                        .upsert(rows, { onConflict: 'service_order_id,item_name' });
+                    
+                    if (error) throw error;
+
+                    if (isAuthorized) {
+                        await supabaseClient
+                            .from('history_events')
+                            .insert({
+                                service_order_id: selectedOS.os_id || selectedOS.id,
+                                action: 'Divergência de Qualidade Autorizada',
+                                details: `Supervisor ${supervisorName} autorizou divergências na Qualidade: ${divergentItems.join(', ')}`,
+                                timestamp: new Date().toISOString()
+                            });
+                    }
+
+                    // Sucesso visual
+                    btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-emerald-700');
+                    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Auditoria Salva!';
+                    
+                    // Garante que a Aba 3 (Inspeção Final) esteja desbloqueada para uso
+                    const tab4 = document.getElementById('tab4');
+                    if(tab4) tab4.classList.remove('opacity-40', 'pointer-events-none', 'grayscale');
+
+                    return true;
+                };
+
+                // 3. Trava de Senha se houver divergência
+                if (hasDivergence) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)';
+
+                    const modal = document.getElementById('modal-supervisor');
+                    document.getElementById('modal-supervisor-desc').innerHTML = `<b>Divergências detectadas:</b><br>${divergentItems.join('<br>')}<br><br>Digite a senha do líder para autorizar o salvamento.`;
+                    document.getElementById('input-supervisor-password').value = '';
+                    modal.style.display = 'flex';
+
+                    // Modifica a ação do botão confirmar no modal dinamicamente
+                    document.getElementById('btn-confirm-supervisor').onclick = async () => {
+                        const pass = document.getElementById('input-supervisor-password').value.trim();
+                        if (pass === 'TURBOSUL2026') {
+                            closeSupervisorModal(true); 
+                            btn.disabled = true;
+                            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> Gravando...`;
+                            await executeSaveAudit(true, "Líder Qualidade");
+                        } else {
+                            alert("❌ Senha incorreta! Autorização negada.");
+                        }
+                    };
+                    return false;
+                } else {
+                    await executeSaveAudit(false);
+                    return true;
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Falha ao salvar auditoria.");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)';
+                return false;
+            }
+        }
+
         async function saveQualityChecklist() {
             const btn = document.getElementById('btn-salvar-checklist');
             btn.disabled = true;
@@ -399,6 +544,16 @@
             btn.classList.add('tab-active');
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
+
+            // Exibe o botão de Salvar Auditoria apenas nas abas 1 e 2
+            const auditActions = document.getElementById('audit-actions');
+            if (auditActions) {
+                if (tabId === 'tab1' || tabId === 'tab2') {
+                    auditActions.classList.remove('hidden');
+                } else {
+                    auditActions.classList.add('hidden');
+                }
+            }
         }
 
         function updateSelectColor(el) {
@@ -422,8 +577,21 @@
             setTimeout(() => { if(modal) modal.classList.add('hidden'); }, 300);
         }
 
-        function closeSupervisorModal() {
+        function closeSupervisorModal(isAuthorized = false) {
             document.getElementById('modal-supervisor').style.display = 'none';
+            
+            // Se o líder NÃO autorizou a divergência da auditoria, bloqueia a Inspeção Final (Aba 3) e o Botão Final
+            if (!isAuthorized) {
+                const tab4 = document.getElementById('tab4');
+                const btnFinalize = document.getElementById('btn-finalize-quality');
+                
+                if(tab4) tab4.classList.add('opacity-40', 'pointer-events-none', 'grayscale');
+                if(btnFinalize) {
+                    btnFinalize.disabled = true;
+                    btnFinalize.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                alert("⚠️ Divergência não autorizada. A Inspeção Técnica Final foi bloqueada.");
+            }
         }
 
     </script>
