@@ -220,7 +220,7 @@
             }).join('');
         }
 
-        function selectOS(id) {
+        async function selectOS(id) {
             selectedOS = queueData.find(o => (o.os_id || o.service_order_id || o.id) === id);
             
             document.querySelectorAll('#os-list > div').forEach(c => c.classList.remove('os-card-selected'));
@@ -251,27 +251,57 @@
                 btnAuditoria.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Salvar Auditoria (Anexos e Geral)';
             }
 
-            renderAuditTabs();
+            // BUSCA SE JÁ EXISTEM DADOS SALVOS NO BANCO PARA ESSA OS
+            let savedAuditData = [];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('checklist_qualidade')
+                    .select('*')
+                    .eq('service_order_id', selectedOS.os_id || selectedOS.id);
+                
+                if (!error && data) {
+                    savedAuditData = data;
+                }
+            } catch (e) {
+                console.error("Erro ao buscar auditoria salva:", e);
+            }
+
+            renderAuditTabs(savedAuditData); // Passa os dados salvos para a função desenhar na tela
             renderQualityGrid();
             validateQualityClearance(); // Valida o estado inicial dos botões
         }
 
-        function renderAuditTabs() {
+        function renderAuditTabs(savedData = []) {
             ['tab1', 'tab2'].forEach(tabId => {
                 const container = document.getElementById(tabId);
-                container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
+                container.innerHTML = AUDIT_ITEMS[tabId].map(item => {
+                    // Tenta encontrar se esta peça já tem histórico salvo no banco de dados
+                    const savedItem = savedData.find(d => d.item_name.toUpperCase().trim() === item.toUpperCase().trim());
+                    const currentStatus = savedItem ? savedItem.status : 'NÃO INFORMADO';
+                    const currentObs = savedItem ? (savedItem.notes || savedItem.observation || '') : '';
+
+                    // Define a cor de fundo com base no status que foi salvo no banco
+                    let colorClass = 'bg-slate-400';
+                    if (currentStatus === 'PEÇA OK') colorClass = 'bg-emerald-500';
+                    else if (currentStatus === 'RECONDICIONAR') colorClass = 'bg-yellow-500';
+                    else if (currentStatus === 'TROCAR') colorClass = 'bg-red-600';
+
+                    return `
                     <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
                         <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
                         <div class="col-span-3">
-                            <select onchange="updateSelectColor(this);" class="select-audit-final w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
-                                <option value="NÃO INFORMADO">NÃO INFORMADO</option>
-                                <option value="PEÇA OK">PEÇA OK</option>
-                                <option value="RECONDICIONAR">RECONDICIONAR</option>
-                                <option value="TROCAR">TROCAR</option>
+                            <select onchange="updateSelectColor(this);" class="select-audit-final w-full ${colorClass} text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
+                                <option value="NÃO INFORMADO" ${currentStatus === 'NÃO INFORMADO' ? 'selected' : ''}>NÃO INFORMADO</option>
+                                <option value="PEÇA OK" ${currentStatus === 'PEÇA OK' ? 'selected' : ''}>PEÇA OK</option>
+                                <option value="RECONDICIONAR" ${currentStatus === 'RECONDICIONAR' ? 'selected' : ''}>RECONDICIONAR</option>
+                                <option value="TROCAR" ${currentStatus === 'TROCAR' ? 'selected' : ''}>TROCAR</option>
                             </select>
                         </div>
-                        <div class="col-span-4"><input type="text" placeholder="Obs de auditoria..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent"></div>
-                    </div>`).join('');
+                        <div class="col-span-4">
+                            <input type="text" value="${currentObs}" placeholder="Obs de auditoria..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent">
+                        </div>
+                    </div>`;
+                }).join('');
             });
         }
 
