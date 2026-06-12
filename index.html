@@ -161,6 +161,7 @@
         const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/quality-action';
         let selectedOS = null;
         let queueData = [];
+        let isAuditSaved = false; // Indica se o checklist de auditoria já está salvo
 
         const AUDIT_ITEMS = {
             'tab1': ['Travas CCO', 'Travas CT', 'Parafuso CT Flangeado', 'Parafuso CCO Flangeado', 'Cano Retorno Parafusos', 'Adaptador Lubrificação', 'Nipel de Lubrificação', 'Cano Lubrificação com Nipel', 'Atuador Pressão', 'Atuador Vácuo', 'Atuador Vácuo Eletrônico', 'Atuador Eletrônico com Haste', 'Suporte Atuador Eletrônico', 'Calço Atuador', 'Chapa de Proteção Atuador', 'Parafusos Suporte Atuador', 'Parafusos Chapa Proteção', 'Mangueira na CCO', 'Prisioneiro Saída', 'Prisioneiro Pé Mesa CT', 'Prisioneiro CCE', 'Parafuso CCE', 'Prisioneiro CCO', 'Parafuso CCO', 'Prisioneiro Especial Longo', 'Saída de Escape', 'Flange Saída CT', 'Chapa de Proteção CT', 'Freio Motor', 'Chapa de Proteção Saída', 'Nipel Fixo na CCO', 'Nipel Roscado na CCO', 'Nipel com Parafuso OCO', 'Olhal', 'Parafuso OCO', 'Coletor', 'Cinta CT CCE', 'Cinta CCO', 'Cinta Saída', 'Flange Pé Mesa CT', 'Cano Admissão CCO', 'Cano Admissão Motor', 'Cano de Água', 'Valvula Prioritária', 'Valvula Solenóide', 'Sonda Temp Pressão', 'Sensor PVF', 'Bocal Plástico Biturbo', 'Tampão CT', 'Arruela Plástica Biturbo', 'Bocal Alumínio Biturbo', 'Luva Borracha Biturbo', 'Cano Ligação Alumínio', 'Capa Alumínio Biturbo', 'Peça Alumínio com Mola', 'Juntas', 'Almofada Amianto Saída', 'Mangueira Atuador', 'Conexão T', 'Defletor Admissão com Trava', 'Abraçadeiras', 'Capa Protetiva Alumínio', 'Nipel de Retorno', 'Mangueira de Retorno', 'Suporte CT', 'Anel Cano Retorno', 'Parafuso União Biturbo', 'Valvula Pressão Partida', 'Oring', 'Valvula Sensor Partida', 'Mangueira Bocal Alumínio'],
@@ -253,6 +254,7 @@
 
             // BUSCA SE JÁ EXISTEM DADOS SALVOS NO BANCO PARA ESSA OS
             let savedAuditData = [];
+            isAuditSaved = false;
             try {
                 const { data, error } = await supabaseClient
                     .from('checklist_qualidade')
@@ -261,6 +263,7 @@
                 
                 if (!error && data) {
                     savedAuditData = data;
+                    isAuditSaved = data.length > 0; // Se houver linhas salvas, define como True
                 }
             } catch (e) {
                 console.error("Erro ao buscar auditoria salva:", e);
@@ -272,36 +275,57 @@
         }
 
         function renderAuditTabs(savedData = []) {
+            const isSaved = savedData.length > 0;
+
             ['tab1', 'tab2'].forEach(tabId => {
                 const container = document.getElementById(tabId);
-                container.innerHTML = AUDIT_ITEMS[tabId].map(item => {
-                    // Tenta encontrar se esta peça já tem histórico salvo no banco de dados
-                    const savedItem = savedData.find(d => d.item_name.toUpperCase().trim() === item.toUpperCase().trim());
-                    const currentStatus = savedItem ? savedItem.status : 'NÃO INFORMADO';
-                    const currentObs = savedItem ? (savedItem.notes || savedItem.observation || '') : '';
+                
+                if (isSaved) {
+                    // --- MODO LEITURA (IGUAL DESMONTAGEM) ---
+                    // Filtra apenas os registros que pertencem especificamente a esta aba
+                    const savedItemsForThisTab = savedData.filter(d => 
+                        AUDIT_ITEMS[tabId].some(item => item.toUpperCase().trim() === d.item_name.toUpperCase().trim())
+                    );
 
-                    // Define a cor de fundo com base no status que foi salvo no banco
-                    let colorClass = 'bg-slate-400';
-                    if (currentStatus === 'PEÇA OK') colorClass = 'bg-emerald-500';
-                    else if (currentStatus === 'RECONDICIONAR') colorClass = 'bg-yellow-500';
-                    else if (currentStatus === 'TROCAR') colorClass = 'bg-red-600';
+                    if (savedItemsForThisTab.length === 0) {
+                        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs italic">Nenhuma divergência ou alteração foi necessária nas peças desta aba.</div>`;
+                        return;
+                    }
 
-                    return `
-                    <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
-                        <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
-                        <div class="col-span-3">
-                            <select onchange="updateSelectColor(this);" class="select-audit-final w-full ${colorClass} text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
-                                <option value="NÃO INFORMADO" ${currentStatus === 'NÃO INFORMADO' ? 'selected' : ''}>NÃO INFORMADO</option>
-                                <option value="PEÇA OK" ${currentStatus === 'PEÇA OK' ? 'selected' : ''}>PEÇA OK</option>
-                                <option value="RECONDICIONAR" ${currentStatus === 'RECONDICIONAR' ? 'selected' : ''}>RECONDICIONAR</option>
-                                <option value="TROCAR" ${currentStatus === 'TROCAR' ? 'selected' : ''}>TROCAR</option>
-                            </select>
-                        </div>
-                        <div class="col-span-4">
-                            <input type="text" value="${currentObs}" placeholder="Obs de auditoria..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent">
-                        </div>
-                    </div>`;
-                }).join('');
+                    container.innerHTML = savedItemsForThisTab.map(item => {
+                        let badgeColor = "bg-slate-100 text-slate-700";
+                        if (item.status === 'PEÇA OK') badgeColor = "bg-emerald-500 text-white";
+                        if (item.status === 'RECONDICIONAR') badgeColor = "bg-yellow-500 text-white";
+                        if (item.status === 'TROCAR') badgeColor = "bg-red-600 text-white";
+
+                        return `
+                            <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl mb-2">
+                                <span class="font-extrabold text-slate-700 uppercase text-[10px] tracking-tight ml-2">${item.item_name}</span>
+                                <div class="flex items-center space-x-3">
+                                    <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${badgeColor} tracking-wider">${item.status}</span>
+                                    ${item.notes || item.observation ? `<span class="text-[10px] text-slate-400 italic max-w-[200px] truncate">Obs: "${item.notes || item.observation}"</span>` : ''}
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                } else {
+                    // --- MODO EDIÇÃO (PADRÃO ANTES DE SALVAR) ---
+                    container.innerHTML = AUDIT_ITEMS[tabId].map(item => `
+                        <div class="grid grid-cols-12 gap-3 items-center bg-white p-2 border-b border-slate-50 hover:bg-slate-50 transition">
+                            <div class="col-span-5 text-[10px] font-bold text-slate-600 uppercase tracking-tighter ml-2">${item}</div>
+                            <div class="col-span-3">
+                                <select onchange="updateSelectColor(this);" class="select-audit-final w-full bg-slate-400 text-white text-[9px] font-black py-2 rounded-lg uppercase text-center outline-none">
+                                    <option value="NÃO INFORMADO">NÃO INFORMADO</option>
+                                    <option value="PEÇA OK">PEÇA OK</option>
+                                    <option value="RECONDICIONAR">RECONDICIONAR</option>
+                                    <option value="TROCAR">TROCAR</option>
+                                </select>
+                            </div>
+                            <div class="col-span-4">
+                                <input type="text" placeholder="Obs de auditoria..." class="w-full bg-slate-100 text-slate-500 text-[10px] rounded-lg px-3 py-1.5 outline-none focus:ring-1 border border-transparent">
+                            </div>
+                        </div>`).join('');
+                }
             });
         }
 
@@ -575,10 +599,10 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
 
-            // Exibe o botão de Salvar Auditoria apenas nas abas 1 e 2
+            // Só exibe o botão de Salvar se for Aba 1 ou 2 E a auditoria ainda NÃO estiver salva
             const auditActions = document.getElementById('audit-actions');
             if (auditActions) {
-                if (tabId === 'tab1' || tabId === 'tab2') {
+                if ((tabId === 'tab1' || tabId === 'tab2') && !isAuditSaved) {
                     auditActions.classList.remove('hidden');
                 } else {
                     auditActions.classList.add('hidden');
