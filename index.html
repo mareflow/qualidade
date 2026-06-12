@@ -291,11 +291,11 @@
         }
 
         function validateQualityClearance() {
-            const totalCheckboxes = QUALITY_CHECKS.length;
             const checkedCount = document.querySelectorAll('.check-qualidade:checked').length;
             const btnSave = document.getElementById('btn-salvar-checklist');
 
-            if (checkedCount === totalCheckboxes) {
+            // Liberado se pelo menos 1 item estiver selecionado
+            if (checkedCount >= 1) {
                 btnSave.disabled = false;
                 btnSave.classList.remove('bg-amber-300', 'text-amber-800', 'cursor-not-allowed');
                 btnSave.classList.add('bg-amber-500', 'text-white', 'hover:bg-amber-600');
