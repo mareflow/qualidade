@@ -45,11 +45,10 @@
             </div>
         </div>
         <div class="flex items-center space-x-6">
-            <div class="text-right border-l pl-6 border-slate-200">
-                <p class="text-sm font-bold leading-none">Administrador</p>
-                <p class="text-[10px] text-turbo-red font-black uppercase tracking-wider">Qualidade</p>
+            <div class="text-right pr-4">
+                <p class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Qualidade</p>
             </div>
-            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold transition">Sair</button>
+            <button onclick="window.location.href='https://mareflow.github.io/turbosul-login/'" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold transition">Sair</button>
         </div>
     </header>
 
@@ -76,11 +75,15 @@
             <div id="main-workspace" class="hidden space-y-6 pb-24">
                 
                 <!-- TOP INFO -->
-                <div class="bg-turbo-red rounded-3xl shadow-lg text-white p-6 min-h-[120px] flex flex-col justify-center relative overflow-hidden">
+                <div class="bg-turbo-red rounded-3xl shadow-lg text-white p-6 min-h-[120px] flex justify-between items-center relative overflow-hidden">
                     <div class="relative z-10 ml-4">
                         <h2 id="display-os" class="text-3xl font-black mb-1 italic tracking-tighter uppercase">OS-XXXX</h2>
                         <p id="display-desc" class="text-sm font-medium opacity-90 uppercase tracking-widest italic">CLIENTE | MODELO</p>
                     </div>
+                    <!-- Botão de histórico integrado à Qualidade -->
+                    <button type="button" onclick="carregarLinhaDoTempo(selectedOS?.os_id || selectedOS?.id)" class="relative z-10 bg-slate-900 hover:bg-black text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg mr-4">
+                        <i class="fa-solid fa-clock-rotate-left mr-2"></i> Histórico Completo
+                    </button>
                     <i class="fa-solid fa-magnifying-glass absolute right-[-20px] bottom-[-20px] text-white opacity-10 text-9xl"></i>
                 </div>
 
@@ -648,6 +651,47 @@
             }
         }
 
+        // FUNÇÕES DE HISTÓRICO E CONTROLE DE MODAL DA QUALIDADE
+        function closeModal(id) { 
+            document.getElementById(id).classList.add('hidden'); 
+            document.getElementById(id).classList.remove('flex'); 
+        }
+
+        async function carregarLinhaDoTempo(osId) {
+            if (!osId) return;
+            const os = selectedOS;
+            
+            // Preenche dados básicos no modal
+            document.getElementById('detail-business-id').textContent = os.business_id;
+            document.getElementById('detail-model').textContent = os.model || 'N/A';
+
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-slate-400 animate-pulse text-center">Buscando rastreio...</p>';
+            
+            document.getElementById('details-modal').classList.remove('hidden');
+            document.getElementById('details-modal').classList.add('flex');
+
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('history_events')
+                    .select('*')
+                    .eq('service_order_id', osId)
+                    .order('timestamp', { ascending: true });
+
+                if (!error && events && events.length > 0) {
+                    timeline.innerHTML = events.map(ev => `
+                        <div class="relative pb-3">
+                            <div class="absolute -left-[21px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"></div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
+                            <p class="text-[10px] text-slate-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[9px] text-slate-400 italic">"${ev.details}"</p>` : ''}
+                        </div>`).join('');
+                } else { 
+                    timeline.innerHTML = '<p class="text-xs text-slate-400 italic text-center">Nenhum evento registrado ainda.</p>'; 
+                }
+            } catch (err) { console.error(err); }
+        }
+
     </script>
 	
 	<!-- MODAL CUSTOMIZADO QUALIDADE -->
@@ -679,6 +723,26 @@
             <div class="flex space-x-3">
                 <button type="button" onclick="closeSupervisorModal()" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-200">Cancelar</button>
                 <button type="button" id="btn-confirm-supervisor" class="flex-[2] bg-red-600 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-lg hover:bg-red-700">Autorizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE HISTÓRICO COMPLETO (TIMELINE) -->
+    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[110]">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-black text-turbo-red uppercase tracking-tighter">Histórico da OS</h3>
+                <button onclick="closeModal('details-modal')" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800">--</p></div>
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
+            </div>
+
+            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
+            <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
+                <!-- Histórico injetado aqui -->
             </div>
         </div>
     </div>
